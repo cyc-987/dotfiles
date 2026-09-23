@@ -35,7 +35,31 @@ DOTFILES_DIR="$HOME/Projects/dotfiles"
 
 ### 2. 安装上游配置所需的软件
 
-先安装 tmux、Neovim 和 [LazyVim 要求的外部工具](https://www.lazyvim.org/)。Oh My Tmux 还需要 awk、perl、grep、sed。Neovim 和 tmux 的版本要求见上面的官方链接。
+先安装 tmux、Neovim 和 [LazyVim 要求的外部工具](https://www.lazyvim.org/)。Oh My Tmux 还需要 awk、perl、grep、sed。Neovim 和 tmux 的版本要求见上面的官方链接。在已有 Neovim 的设备上，可以跳过下面的无 sudo 安装步骤。
+
+#### 无 sudo 的 Linux 服务器：安装 Neovim
+
+根据 [Neovim 官方安装说明](https://github.com/neovim/neovim/blob/master/INSTALL.md#linux)，可以将预编译压缩包安装在自己的家目录。下面的命令支持 `x86_64` 和 `aarch64`/`arm64`；需要 `curl` 和 `tar`，且服务器能够访问 GitHub：
+
+```sh
+case "$(uname -m)" in
+  x86_64) nvim_arch=x86_64 ;;
+  aarch64|arm64) nvim_arch=arm64 ;;
+  *) echo "请先确认该服务器是否有对应的 Neovim 发行包" >&2; exit 1 ;;
+esac
+
+mkdir -p "$HOME/.local/opt" "$HOME/.local/bin"
+curl -fL "https://github.com/neovim/neovim/releases/latest/download/nvim-linux-${nvim_arch}.tar.gz" \
+  -o "$HOME/.local/opt/nvim-linux-${nvim_arch}.tar.gz"
+tar -xzf "$HOME/.local/opt/nvim-linux-${nvim_arch}.tar.gz" -C "$HOME/.local/opt"
+ln -s "$HOME/.local/opt/nvim-linux-${nvim_arch}/bin/nvim" "$HOME/.local/bin/nvim"
+export PATH="$HOME/.local/bin:$PATH"
+nvim --version
+```
+
+若 `~/.local/bin/nvim` 已存在，先确认来源并备份，再建立链接。将 `export PATH="$HOME/.local/bin:$PATH"` 加入服务器使用的 shell 启动文件（例如 `~/.bashrc` 或 `~/.zshrc`），这样重新登录后仍能运行 `nvim`。如果服务器无法访问 GitHub，可在其他机器下载相同架构的官方压缩包，传到服务器后从 `tar` 命令继续。
+
+此处安装的是 Neovim 程序本身；第 3 步会链接个人配置，首次启动时再由 `lazy.nvim` 安装 LazyVim 插件。运行 `:LazyHealth` 可以检查服务器缺少的外部工具；这些工具需按服务器环境单独准备。
 
 #### Oh My Tmux
 
