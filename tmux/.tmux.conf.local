@@ -8,6 +8,8 @@
 
 set -g history-limit 100000
 set -g set-clipboard on
+# cmux (libghostty): preserve colors used by Snacks image placeholders.
+set -as terminal-features ',xterm-256color:RGB:usstyle'
 
 # -- bindings ------------------------------------------------------------------
 

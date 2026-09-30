@@ -56,6 +56,7 @@ end
 return {
   "folke/snacks.nvim",
   opts = {
+    image = { enabled = true },
     picker = {
       actions = {
         explorer_yank_relative = yank_relative,
