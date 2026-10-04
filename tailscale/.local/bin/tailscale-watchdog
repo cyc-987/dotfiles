@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Linux userspace daemon: keep state local and restart after process exits.
+set -u
+umask 077
+
+BIN="${TAILSCALE_BIN_DIR:-$HOME/.local/bin}/tailscaled"
+STATE_DIR="${TAILSCALE_STATE_DIR:-$HOME/.local/state/tailscale}"
+STATE="$STATE_DIR/tailscaled.state"
+SOCKET="$STATE_DIR/tailscaled.sock"
+LOG="$STATE_DIR/tailscaled.log"
+LOCK="$STATE_DIR/watchdog.lock"
+
+if [[ ! -x "$BIN" ]]; then
+    echo "Missing executable: $BIN" >&2
+    exit 1
+fi
+if ! command -v flock >/dev/null 2>&1; then
+    echo "flock is required to prevent duplicate watchdogs." >&2
+    exit 1
+fi
+mkdir -p "$STATE_DIR"
+chmod 700 "$STATE_DIR"
+exec 9>"$LOCK"
+if ! flock -n 9; then
+    echo "A Tailscale watchdog or its daemon already holds $LOCK" >&2
+    exit 1
+fi
+
+child_pid=""
+shutdown() {
+    trap - INT TERM
+    if [[ -n "$child_pid" ]]; then
+        kill -TERM "$child_pid" 2>/dev/null || true
+        wait "$child_pid" 2>/dev/null || true
+    fi
+    exit 0
+}
+trap shutdown INT TERM
+
+while true; do
+    echo "[$(date '+%F %T')] starting tailscaled" >> "$LOG"
+    "$BIN" \
+        --tun=userspace-networking \
+        --state="$STATE" \
+        --socket="$SOCKET" \
+        --socks5-server=127.0.0.1:1055 \
+        --outbound-http-proxy-listen=127.0.0.1:1055 \
+        >> "$LOG" 2>&1 &
+    child_pid=$!
+    wait "$child_pid"
+    rc=$?
+    child_pid=""
+    echo "[$(date '+%F %T')] tailscaled exited rc=$rc; restarting in 3s" >> "$LOG"
+    sleep 3
+done

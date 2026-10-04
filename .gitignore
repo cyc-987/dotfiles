@@ -2,3 +2,23 @@
 *.bak
 *~
 *.log
+
+# Network state, credentials, caches, and generated configuration stay local.
+**/.local/state/
+**/.local/opt/
+**/.local/bin/tailscale
+**/.local/bin/tailscaled
+**/.local/bin/mihomo
+**/tailscaled.state
+**/tailscaled.sock
+**/subscription.url
+**/subscription.local.*
+**/.config/mihomo/config.yaml
+**/.config/mihomo/cache.db
+**/.config/mihomo/sub/
+**/.config/mihomo/rule/
+**/.config/mihomo/GeoSite.dat
+**/.config/mihomo/geoip.metadb
+**/.config/mihomo/*.mmdb
+*.bak.*
+__pycache__/

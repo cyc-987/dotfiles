@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Run one foreground instance; use nohup/tmux externally for session persistence.
+set -euo pipefail
+umask 077
+
+BIN="${MIHOMO_BIN:-$HOME/.local/bin/mihomo}"
+CONFIG="${MIHOMO_CONFIG:-$HOME/.config/mihomo/config.yaml}"
+DATA_DIR="${MIHOMO_DATA_DIR:-$HOME/.config/mihomo}"
+STATE_DIR="${MIHOMO_STATE_DIR:-$HOME/.local/state/mihomo}"
+
+if [[ ! -x "$BIN" || ! -f "$CONFIG" ]]; then
+    echo "Prepare Mihomo binary and configuration first: $BIN / $CONFIG" >&2
+    exit 1
+fi
+for dependency in flock ss; do
+    if ! command -v "$dependency" >/dev/null 2>&1; then
+        echo "Missing dependency: $dependency (Linux launcher)" >&2
+        exit 1
+    fi
+done
+mkdir -p "$STATE_DIR" "$DATA_DIR"
+chmod 700 "$STATE_DIR"
+exec 9>"$STATE_DIR/run.lock"
+if ! flock -n 9; then
+    echo "Another mihomo-run instance already holds $STATE_DIR/run.lock" >&2
+    exit 1
+fi
+# Older instances started without this wrapper do not hold our lock.
+listeners=$(ss -H -ltn '( sport = :63796 or sport = :63797 )')
+if [[ -n "$listeners" ]]; then
+    echo "Mihomo ports 63796/63797 are occupied. Identify and stop the old instance first:" >&2
+    echo "ss -ltnp | rg ':(63796|63797)\\b'" >&2
+    printf '%s\n' "$listeners" >&2
+    exit 1
+fi
+exec "$BIN" -d "$DATA_DIR" -f "$CONFIG"

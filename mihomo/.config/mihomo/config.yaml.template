@@ -1,0 +1,865 @@
+mixed-port: 63796
+allow-lan: false
+mode: rule
+log-level: info
+external-controller: 127.0.0.1:63797
+#【Mihomo 专属】TCP 连接并发，如果域名解析结果对应多个 IP，
+# 并发所有 IP，选择握手最快的 IP 进行连接
+tcp-concurrent: true
+
+# 配置缓存 (代理中选择的节点和 fake-ip 缓存)
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+# #【Mihomo 专属】使用 geoip.dat 数据库(默认：false 使用 mmdb 数据库)
+# geodata-mode: true
+# geo-auto-update: true # 自动更新
+# geo-update-interval: 24 # 更新间隔 24 小时
+# geox-url:
+#   geoip: "https://cdn.jsdelivr.net/gh/DustinWin/ruleset_geodata@mihomo-geodata/geoip-all.dat"
+#   geosite: "https://cdn.jsdelivr.net/gh/DustinWin/ruleset_geodata@mihomo-geodata/geosite-all.dat"
+#   mmdb: "https://cdn.jsdelivr.net/gh/DustinWin/ruleset_geodata@mihomo-geodata/Country-all.mmdb"
+#   asn: "https://cdn.jsdelivr.net/gh/DustinWin/ruleset_geodata@mihomo-geodata/Country-ASN-all.mmdb"
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  default-nameserver:
+  - 223.5.5.5
+  - 8.8.8.8
+  - 1.1.1.1
+  proxy-server-nameserver:
+  - https://dns.alidns.com/dns-query
+  nameserver-policy:
+    geosite:gfw,geolocation-!cn:
+    - https://1.1.1.1/dns-query#🚀 节点选择
+    - https://1.0.0.1/dns-query#🚀 节点选择
+    - https://8.8.8.8/dns-query#🚀 节点选择
+    +.zju.edu.cn:
+    - 10.106.209.1
+    - 10.10.0.21
+    - https://1.1.1.1/dns-query#🚀 节点选择
+    - https://1.0.0.1/dns-query#🚀 节点选择
+    - https://8.8.8.8/dns-query#🚀 节点选择
+  nameserver:
+  - https://dns.alidns.com/dns-query
+  - https://doh.pub/dns-query
+  - https://8.8.8.8/dns-query#🚀 节点选择
+  fallback:
+  - https://1.1.1.1/dns-query#🚀 节点选择
+  - https://1.0.0.1/dns-query#🚀 节点选择
+  - https://8.8.8.8/dns-query#🚀 节点选择
+  fallback-filter:
+    geoip: false
+    geoip-code: CN
+    ipcidr:
+    - 240.0.0.0/4
+  fake-ip-filter:
+  - +.lan
+  - +.microsoft*.com
+  - localhost.ptlogin2.qq.com
+proxies:
+- name: Tailscale
+  type: socks5
+  server: 127.0.0.1
+  port: 1055
+  udp: true
+proxy-providers:
+  subscription0:
+    type: http
+    url: __MIHOMO_SUBSCRIPTION_URL__
+    interval: 3600
+    path: ./sub/subscription0.yaml
+    health-check:
+      enable: true
+      interval: 60
+      url: https://www.gstatic.com/generate_204
+proxy-groups:
+- name: 🚀 节点选择
+  type: select
+  proxies:
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+  - DIRECT
+- name: ♻️ 自动选择
+  type: url-test
+  filter: ^(?!.*(ZJU|浙大|内网|✉️)).*
+  use:
+  - subscription0
+  url: https://www.gstatic.com/generate_204
+  interval: 60
+  tolerance: 50
+- name: 🚀 手动切换1
+  type: select
+  use:
+  - subscription0
+- name: 🚀 手动切换2
+  type: select
+  use:
+  - subscription0
+- name: 🤖 AI节点
+  type: select
+  filter: (?i:(?:\bAI\b|人工智能|OpenAI|ChatGPT|GPT|Claude|Gemini|Bard|Copilot|Perplexity|Poe|Grok))
+  use:
+  - subscription0
+- name: 🔯 故障转移
+  type: fallback
+  filter: ^(?!.*(ZJU|浙大|内网|✉️)).*
+  use:
+  - subscription0
+  url: https://www.gstatic.com/generate_204
+  interval: 60
+  tolerance: 50
+- name: 🔮 负载均衡
+  type: load-balance
+  filter: ^(?!.*(ZJU|浙大|内网|✉️)).*
+  use:
+  - subscription0
+  strategy: consistent-hashing
+  url: https://www.gstatic.com/generate_204
+  interval: 60
+  tolerance: 50
+- name: ✔ ZJU-INTL
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: ✔ ZJU
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 📃 ZJU More Scholar
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 💬 Ai平台
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+  - DIRECT
+  - REJECT
+- name: 📲 电报消息
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+  - DIRECT
+  - REJECT
+- name: 📹 油管视频
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+  - DIRECT
+  - REJECT
+- name: 🎥 奈飞视频
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+  - DIRECT
+  - REJECT
+- name: 📺 巴哈姆特
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+  - DIRECT
+  - REJECT
+- name: 📺 哔哩哔哩
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 🌍 国外媒体
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+  - DIRECT
+  - REJECT
+- name: 🌏 国内媒体
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 📢 谷歌FCM
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 📢 谷歌服务
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+  - DIRECT
+  - REJECT
+- name: Ⓜ️ 微软Bing
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+  - DIRECT
+  - REJECT
+- name: Ⓜ️ 微软云盘
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: Ⓜ️ 微软服务
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 🍎 苹果服务
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 🎮 游戏平台
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 🎶 网易音乐
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 🎶 Spotify
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 🛸 PT站
+  type: select
+  proxies:
+  - DIRECT
+  - REJECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 🎯 全球直连
+  type: select
+  proxies:
+  - Tailscale
+- name: 🛑 广告拦截
+  type: select
+  proxies:
+  - REJECT
+  - DIRECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 🍃 应用净化
+  type: select
+  proxies:
+  - REJECT
+  - DIRECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 🛡️ 隐私防护
+  type: select
+  proxies:
+  - REJECT
+  - DIRECT
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+- name: 🐟 漏网之鱼
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - ♻️ 自动选择
+  - 🚀 手动切换1
+  - 🚀 手动切换2
+  - 🤖 AI节点
+  - 🔯 故障转移
+  - 🔮 负载均衡
+  - 🇯🇵 日本节点
+  - 🇬🇧 英国节点
+  - 🇺🇸 美国节点
+  - DIRECT
+  - REJECT
+- name: 🇯🇵 日本节点
+  type: url-test
+  filter: (?i:\b(?:JP|JPN)\d*\b|Japan|Tokyo|Osaka|Saitama|日本|东京|大阪|埼玉|[^-]日)
+  use:
+  - subscription0
+  url: https://www.gstatic.com/generate_204
+  interval: 60
+  tolerance: 50
+- name: 🇬🇧 英国节点
+  type: url-test
+  filter: (?i:\b(?:UK|GB|GBR)\d*\b|United.*?Kingdom|Britain|London|Manchester|Birmingham|英国|[^-]英)
+  use:
+  - subscription0
+  url: https://www.gstatic.com/generate_204
+  interval: 60
+  tolerance: 50
+- name: 🇺🇸 美国节点
+  type: url-test
+  filter: (?i:\b(?:US|USA)\d*\b|America|United.*?States|美国|[^-]美|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥)
+  use:
+  - subscription0
+  url: https://www.gstatic.com/generate_204
+  interval: 60
+  tolerance: 50
+rule-providers:
+  PrivateTracker:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/PrivateTracker.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FPrivateTracker.list
+  ZJU-INTL:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/ZJU-INTL.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FZJU-INTL.list
+  ZJU:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/ZJU.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FZJU.list
+  ZJU-More-Scholar:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/ZJU-More-Scholar.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FZJU-More-Scholar.list
+  AI:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/AI.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FAI.list
+  OpenAi:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/OpenAi.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FOpenAi.list
+  LocalAreaNetwork:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/LocalAreaNetwork.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FLocalAreaNetwork.list
+  UnBan:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/UnBan.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FUnBan.list
+  BanAD:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/BanAD.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FBanAD.list
+  BanProgramAD:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/BanProgramAD.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FBanProgramAD.list
+  BanEasyList:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/BanEasyList.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FBanEasyList.list
+  BanEasyListChina:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/BanEasyListChina.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FBanEasyListChina.list
+  BanEasyPrivacy:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/BanEasyPrivacy.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FBanEasyPrivacy.list
+  GoogleFCM:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/GoogleFCM.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FGoogleFCM.list
+  Google:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Google.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FGoogle.list
+  Adobe:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Adobe.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FAdobe.list
+  Bing:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Bing.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FBing.list
+  OneDrive:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/OneDrive.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FOneDrive.list
+  Microsoft:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Microsoft.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FMicrosoft.list
+  Apple:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Apple.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FApple.list
+  Telegram:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Telegram.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FTelegram.list
+  NetEaseMusic:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/NetEaseMusic.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FNetEaseMusic.list
+  Spotify:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Spotify.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FSpotify.list
+  Epic:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Epic.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FEpic.list
+  Origin:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Origin.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FOrigin.list
+  Sony:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Sony.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FSony.list
+  Steam:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Steam.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FSteam.list
+  Nintendo:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Nintendo.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FNintendo.list
+  YouTube:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/YouTube.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FYouTube.list
+  Netflix:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Netflix.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FNetflix.list
+  Bahamut:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Bahamut.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FBahamut.list
+  BilibiliHMT:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/BilibiliHMT.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FBilibiliHMT.list
+  Bilibili:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Bilibili.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FRuleset%2FBilibili.list
+  ChinaMedia:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/ChinaMedia.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FChinaMedia.list
+  ProxyMedia:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/ProxyMedia.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FProxyMedia.list
+  ProxyGFWlist:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/ProxyGFWlist.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FProxyGFWlist.list
+  ChinaIp:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/ChinaIp.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FChinaIp.list
+  ChinaDomain:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/ChinaDomain.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FChinaDomain.list
+  ChinaCompanyIp:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/ChinaCompanyIp.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FChinaCompanyIp.list
+  Download:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/Download.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FDownload.list
+  ZJU-IP:
+    type: http
+    behavior: classical
+    format: text
+    interval: 604800
+    path: ./rule/ZJU-IP.txt
+    url: https://zju.sub-converter.geniucker.top/proxy?url=https%3A%2F%2Fraw.githubusercontent.com%2FSubConv%2FZJU-Rule%2Fmain%2FClash%2FZJU-IP.list
+rules:
+- DOMAIN,zju.sub-converter.geniucker.top,DIRECT
+- RULE-SET,PrivateTracker,🛸 PT站
+- RULE-SET,ZJU-INTL,✔ ZJU-INTL
+- RULE-SET,ZJU,✔ ZJU
+- RULE-SET,ZJU-More-Scholar,📃 ZJU More Scholar
+- RULE-SET,AI,💬 Ai平台
+- RULE-SET,OpenAi,💬 Ai平台
+- RULE-SET,LocalAreaNetwork,🎯 全球直连
+- RULE-SET,UnBan,🎯 全球直连
+- RULE-SET,BanAD,🛑 广告拦截
+- RULE-SET,BanProgramAD,🍃 应用净化
+- RULE-SET,BanEasyList,🛑 广告拦截
+- RULE-SET,BanEasyListChina,🛑 广告拦截
+- RULE-SET,BanEasyPrivacy,🛡️ 隐私防护
+- RULE-SET,GoogleFCM,📢 谷歌FCM
+- RULE-SET,Google,📢 谷歌服务
+- RULE-SET,Adobe,🎯 全球直连
+- RULE-SET,Bing,Ⓜ️ 微软Bing
+- RULE-SET,OneDrive,Ⓜ️ 微软云盘
+- RULE-SET,Microsoft,Ⓜ️ 微软服务
+- RULE-SET,Apple,🍎 苹果服务
+- RULE-SET,Telegram,📲 电报消息
+- RULE-SET,NetEaseMusic,🎶 网易音乐
+- RULE-SET,Spotify,🎶 Spotify
+- RULE-SET,Epic,🎮 游戏平台
+- RULE-SET,Origin,🎮 游戏平台
+- RULE-SET,Sony,🎮 游戏平台
+- RULE-SET,Steam,🎮 游戏平台
+- RULE-SET,Nintendo,🎮 游戏平台
+- RULE-SET,YouTube,📹 油管视频
+- RULE-SET,Netflix,🎥 奈飞视频
+- RULE-SET,Bahamut,📺 巴哈姆特
+- RULE-SET,BilibiliHMT,📺 哔哩哔哩
+- RULE-SET,Bilibili,📺 哔哩哔哩
+- RULE-SET,ChinaMedia,🌏 国内媒体
+- RULE-SET,ProxyMedia,🌍 国外媒体
+- RULE-SET,ProxyGFWlist,🚀 节点选择
+- RULE-SET,ChinaIp,🎯 全球直连
+- RULE-SET,ChinaDomain,🎯 全球直连
+- RULE-SET,ChinaCompanyIp,🎯 全球直连
+- RULE-SET,Download,🎯 全球直连
+- RULE-SET,ZJU-IP,✔ ZJU
+- GEOIP,CN,🎯 全球直连
+- MATCH,Tailscale

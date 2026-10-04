@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+exec "${TAILSCALE_BIN_DIR:-$HOME/.local/bin}/tailscale" \
+  --socket="${TAILSCALE_STATE_DIR:-$HOME/.local/state/tailscale}/tailscaled.sock" \
+  "$@"
